@@ -1,22 +1,51 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
-    />
-    <meta
-      http-equiv="X-Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
-    />
-    <title>Hello from Electron renderer!</title>
-  </head>
-  <body>
-    <h1>Hello from Electron renderer!</h1>
-    <p>👋NICHI</p>
-    <p id="info"></p>
-  </body>
-  <script src="./renderer.js"></script>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">
+    <title>Electron 串口助手</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header class="controls">
+            <div class="control-group">
+                <label for="port-select">串口:</label>
+                <select id="port-select"></select>
+                <button id="refresh-btn" class="icon-btn" title="刷新列表">🔄</button>
+            </div>
+            <div class="control-group">
+                <label for="baud-rate-select">波特率:</label>
+                <select id="baud-rate-select">
+                    <option value="9600">9600</option>
+                    <option value="19200">19200</option>
+                    <option value="38400">38400</option>
+                    <option value="57600">57600</option>
+                    <option value="115200" selected>115200</option>
+                </select>
+            </div>
+            <button id="connect-btn" class="primary-btn">连接</button>
+        </header>
+
+        <main class="data-area">
+            <div id="log-container">
+                </div>
+        </main>
+
+        <footer class="send-area">
+            <div class="send-options">
+                <input type="checkbox" id="hex-send-check">
+                <label for="hex-send-check">Hex发送</label>
+                <input type="checkbox" id="hex-receive-check" checked>
+                <label for="hex-receive-check">Hex接收</label>
+            </div>
+            <textarea id="send-input" placeholder="输入要发送的数据..."></textarea>
+            <button id="send-btn" disabled>发送</button>
+            <button id="clear-log-btn">清空接收区</button>
+        </footer>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
 </html>
