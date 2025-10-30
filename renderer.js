@@ -30,24 +30,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     navBar.appendChild(button);
+  });
+
     const refreshBtn = document.getElementById('refresh-btn');
 
-    // ... 原有的 sites.forEach 循环和按钮创建逻辑不变 ...
-
-    // 1. 监听刷新按钮点击事件
     refreshBtn.addEventListener('click', () => {
-      // 通知主进程刷新当前激活的 BrowserView
       if (activeButton) {
-        // 【新增】调用 API 通知主进程刷新
         window.api.refreshView(activeButton.dataset.id);
       }
     });
-  });
-
-  // 4. 默认激活第一个按钮
   if (navBar.children.length > 0) {
-    activeButton = navBar.children[0];
+    activeButton = navBar.children[2]; // 0是刷新按钮，1不知是什么
     activeButton.classList.add('active');
-    // (主进程已经默认显示第一个了)
+    window.api.switchView(activeButton.dataset.id);
   }
 });

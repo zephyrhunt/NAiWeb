@@ -1,8 +1,6 @@
 const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu,shell } = require('electron');
 const path = require('path');
 
-// main.js 文件中更新后的 AI_SITES 配置
-
 const AI_SITES = [
   {
     id: 'openai',
@@ -22,16 +20,6 @@ const AI_SITES = [
     url: 'https://chat.deepseek.com',
   },
   {
-    id: 'claude',
-    name: 'Claude',
-    url: 'https://claude.ai',
-  },
-  {
-    id: 'perplexity',
-    name: 'Perplexity',
-    url: 'https://www.perplexity.ai',
-  },
-  {
     id: 'copilot',
     name: 'Copilot (Bing)',
     // Microsoft Copilot (原 Bing Chat) 网页版 URL
@@ -41,19 +29,14 @@ const AI_SITES = [
 const NAV_BAR_HEIGHT = 50; // 顶部导航栏的高度
 const HOTKEY = 'CmdOrCtrl+Shift+G'; // 您想要的全局快捷键
 
-// --- 2. 全局变量 ---
+// 
 let mainWindow;
 let tray;
 const views = {}; // 存储所有 BrowserView
-
-// --- 3. 关键修复：伪装 User-Agent (解决 Google 登录问题) ---
+const loadedStates = {};
 const CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36';
-
-// --- 4. 关键修复：处理 SSL 错误 ---
-// 警告：这会降低安全性，但通常是解决企业代理/防火墙 SSL 问题的唯一方法
 app.commandLine.appendSwitch('ignore-certificate-errors');
-
-// --- 5. 防止应用多开 (对工具类应用很重要) ---
+// 防止应用多开 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -70,20 +53,16 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    show: true,          // 默认隐藏，等待快捷键调用
-    skipTaskbar: true,    // 不在任务栏显示 (使其像个工具)
+    show: true, 
+    skipTaskbar: true,  
     frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  // --- 关键：去掉原生菜单栏 ---
   mainWindow.setMenu(null);
-
   mainWindow.loadFile('index.html');
-
-  // 窗口准备好后，创建所有的 BrowserView
   mainWindow.webContents.on('did-finish-load', () => {
     createAIViews();
   });
@@ -137,46 +116,42 @@ function createAIViews() {
     // --- 关键：在加载 URL 之前设置 User-Agent ---
     view.webContents.setUserAgent(CHROME_USER_AGENT);
     view.webContents.loadURL(site.url);
+    views[site.id] = view
+    loadedStates[site.id] = false
 
-    views[site.id] = view;
+    view.webContents.on('did-finish-load', () => {
+        // 标记为已加载，无论成功或失败 (确保不再触发强制刷新)
+        loadedStates[site.id] = true; 
+    });
 
-    // 默认隐藏 (通过移到后面)
     if (index !== 0) {
       mainWindow.removeBrowserView(view);
       mainWindow.addBrowserView(view);
     }
-    // 监听视图中网页发出的创建新窗口请求 (通常是 Google 登录或外部链接)
+    // 解决外部链接问题，不一定有效
     view.webContents.setWindowOpenHandler(({ url }) => {
-      // 1. 如果是外部链接 (例如 Google 登录或广告)，使用系统浏览器打开
       if (url.startsWith('http') && !url.startsWith(site.url)) {
         shell.openExternal(url);
-        
-        // 阻止在 Electron 内部创建新窗口
         return { action: 'deny' }; 
       }
-      
-      // 2. 如果是当前 AI 网站内部的链接，允许在 BrowserView 内打开
       return { action: 'allow' };
     });
   });
 
-  // 激活第一个
   if (AI_SITES.length > 0) {
+    const firstView = views[AI_SITES[0].id];
+    mainWindow.addBrowserView(firstView); // <<-- 只添加第一个
+    firstView.webContents.focus();        // <<-- 确保初始视图也获得焦点
     mainWindow.setTopBrowserView(views[AI_SITES[0].id]);
   }
 }
 
-
-// --- 6. 创建系统托盘 ---
 function createTray() {
-  // 注意：您需要自己在项目根目录放一个 'icon.png'
   const iconPath = path.join(__dirname, 'assets/icon.png'); 
   tray = new Tray(iconPath);
-
   const contextMenu = Menu.buildFromTemplate([
     { label: `显示/隐藏 (${HOTKEY})`, click: toggleWindow },
     { type: 'separator' },
-    // --- 关键：只保留“退出”功能 ---
     { label: '退出软件', click: () => {
         app.isQuitting = true; // 设置标志
         app.quit();          // 真正退出
@@ -191,36 +166,34 @@ function createTray() {
   tray.on('click', toggleWindow);
 }
 
-// --- 7. 窗口显示/隐藏逻辑 ---
+/* 只有显示和focus才会隐藏 */
 function toggleWindow() {
-  if (mainWindow.isVisible()) {
-    mainWindow.hide();
+  if (mainWindow.isVisible() && mainWindow.isFocused()) {
+      mainWindow.hide();
   } else {
     showWindow();
   }
 }
-
 function showWindow() {
-  // （可选）将窗口定位到屏幕中央
-  // mainWindow.center(); 
   mainWindow.show();
   mainWindow.focus();
 }
 
-// --- IPC (这部分没有变化) ---
 ipcMain.handle('get-sites', () => {
   return AI_SITES.map(site => ({ id: site.id, name: site.name }));
 });
 ipcMain.handle('switch-view', (event, id) => {
   const view = views[id];
   if (view) {
-    // mainWindow.setTopBrowserView(view);
     for (const v of Object.values(views)) {
         mainWindow.removeBrowserView(v);
     }
-
-    // 【Bug 修复点 2】: 重新添加选中的视图，使其独占窗口空间
-    // 并将其自动置于最顶层
+    // view.webContents.focus()
+    if (loadedStates[id] === false) {
+        console.log(`首次切换到 ${id}，尝试强制刷新 (reloadIgnoringCache)。`);
+        view.webContents.reloadIgnoringCache(); // 强制刷新 (忽略缓存)
+    }
+    // mainWindow.setTopBrowserView(view);
     mainWindow.addBrowserView(view);
     return { success: true };
   }
@@ -228,12 +201,10 @@ ipcMain.handle('switch-view', (event, id) => {
 });
 
 
-// --- App 生命周期 ---
 app.whenReady().then(() => {
   createWindow();
   createTray();
 
-  // --- 关键：注册全局快捷键 ---
   const ret = globalShortcut.register(HOTKEY, () => {
     toggleWindow();
   });
@@ -244,7 +215,6 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
-  // 注销所有快捷键
   globalShortcut.unregisterAll();
 });
 
@@ -256,7 +226,6 @@ app.on('activate', () => {
   }
 });
 
-// (macOS) 保持应用在后台运行
 app.on('window-all-closed', (e) => {
   if (process.platform === 'darwin') {
     e.preventDefault();
@@ -266,7 +235,7 @@ app.on('window-all-closed', (e) => {
 ipcMain.on('refresh-view', (event, id) => {
     const view = views[id];
     if (view && view.webContents) {
-        // 使用 webContents.reload() 来强制刷新 BrowserView 的内容
+        console.log("refresh", id)
         view.webContents.reload(); 
     }
 });
