@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu,shell } = require('electron');
 const path = require('path');
 
 // main.js 文件中更新后的 AI_SITES 配置
@@ -19,7 +19,7 @@ const AI_SITES = [
     id: 'deepseek',
     name: 'DeepSeek',
     // DeepSeek Chat 网页版 URL
-    url: 'https://www.deepseek.com/chat',
+    url: 'https://chat.deepseek.com',
   },
   {
     id: 'claude',
