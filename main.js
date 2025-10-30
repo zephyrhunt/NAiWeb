@@ -1,19 +1,22 @@
-console.log('Hello from Electron 👋')
-const { app, BrowserWindow } = require('electron')
-
+// console.log('Hello from Electron ')
+const { app, BrowserWindow, ipcMain } = require('electron/main')
+const path = require('node:path')
 // const createWindow = function() {
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 800,
-    height: 600
+    height: 600,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js')
+    }
   })
 
   win.loadFile('index.html')
 }
 
 app.whenReady().then(() => {
+  ipcMain.handle('ping', () => 'pong')
   createWindow()
-
   app.on("window-all-closed", () => {
     app.quit()
     console.log("quit app")
