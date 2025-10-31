@@ -1,31 +1,23 @@
 const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu,shell } = require('electron');
 const path = require('path');
 
-const aiSites = [
-  {
-    id: 'openai',
-    name: 'ChatGPT',
-    url: 'https://chat.openai.com',
-  },
-  {
-    id: 'gemini',
-    name: 'Gemini (Google)',
-    url: 'https://gemini.google.com/app',
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    url: 'https://chat.deepseek.com',
-  },
-  {
-    id: 'copilot',
-    name: 'Copilot (Bing)',
-    url: 'https://copilot.microsoft.com',
-  },
-];
-const navBarHeight = 50; // 顶部导航栏的高度
-const hotKey = 'Ctrl+Q'; // 您想要的全局快捷键
-
+const fs = require('fs');
+const aiSites = (() => {
+  try {
+    const configPath = path.join(__dirname, 'config', 'ai_sites.json');
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      return config.sites;
+    }
+    console.error('need add ai_sites.josn', configPath);
+    return [];
+  } catch (error) {
+    console.error('read error', error);
+    return [];
+  }
+})();
+const navBarHeight = 50; 
+const hotKey = 'Ctrl+Q'; // 快捷键
 let mainWindow;
 let tray;
 const views = {}; 
@@ -94,14 +86,19 @@ function createAIViews() {
   const [width, height] = mainWindow.getContentSize();
 
   aiSites.forEach((site, index) => {
-    const view = new BrowserView();
+    const view = new BrowserView({
+      webPreferences: {
+        backgroundThrottling: true  // 允许后台节流
+      }
+    });
     view.setBounds({ 
       x: 0, 
       y: navBarHeight, 
       width: width, 
       height: height - navBarHeight 
     });
-    const agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
+    // const agent = " Chrome/129.0.0.0 Firefox/70.0"
+    const agent = "Chrome/129.0.6647.127 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko)"
     view.webContents.setUserAgent(agent);
     view.webContents.loadURL(site.url);
     views[site.id] = view
@@ -177,13 +174,19 @@ ipcMain.handle('switch-view', (event, id) => {
   const view = views[id];
   console.log("switch view", view)
   if (view) {
-    for (const v of Object.values(views)) {
+    for (const [viewId, v] of Object.entries(views)) {
+      if (viewId === id) {
+        v.webContents.setBackgroundThrottling(false);
         mainWindow.removeBrowserView(v);
+        mainWindow.addBrowserView(v);
+      } else {
+        v.webContents.setBackgroundThrottling(true);
+        mainWindow.removeBrowserView(v);
+      }
     }
     if (loadedStates[id] === false) {
         view.webContents.reloadIgnoringCache();
     }
-    mainWindow.addBrowserView(view);
     return { success: true };
   }
   return { success: false };
