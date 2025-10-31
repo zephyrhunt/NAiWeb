@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu,shell } = require('electron');
 const path = require('path');
 
-const ai_sites = [
+const aiSites = [
   {
     id: 'openai',
     name: 'ChatGPT',
@@ -23,14 +23,13 @@ const ai_sites = [
     url: 'https://copilot.microsoft.com',
   },
 ];
-const nav_bar_height = 50; // 顶部导航栏的高度
-const hot_key = 'CmdOrCtrl+Shift+G'; // 您想要的全局快捷键
+const navBarHeight = 50; // 顶部导航栏的高度
+const hotKey = 'Ctrl+Q'; // 您想要的全局快捷键
 
 let mainWindow;
 let tray;
-const views = {}; // 存储所有 BrowserView
+const views = {}; 
 const loadedStates = {};
-const CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36';
 app.commandLine.appendSwitch('ignore-certificate-errors');
 // 防止应用多开 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -38,7 +37,6 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    // 当第二个实例启动时，显示并聚焦第一个实例的窗口
     if (mainWindow) {
       showWindow();
     }
@@ -47,17 +45,15 @@ if (!gotTheLock) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1600,
+    height: 900,
     show: true, 
     skipTaskbar: true,  
     frame: false,
-    experimentalFeatures: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      webSecurity: true
+      // 允许操作，例如复制
+      webSecurity: false
     },
   });
 
@@ -66,43 +62,27 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     createAIViews();
   });
-
-  mainWindow.webContents.on('certificate-error', (event, url, error, certificate, callback) => {
-    event.preventDefault()
-    callback(true)
-  })
-
-    // 设置权限请求处理器
-  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    // 允许常见的权限请求
-    const allowedPermissions = ['notifications', 'clipboard-read', 'clipboard-write'];
-    callback(allowedPermissions.includes(permission));
-  })
-
-  // 监听窗口大小变化，同步调整 BrowserView 的大小
+  
   mainWindow.on('resize', () => {
     const [width, height] = mainWindow.getContentSize();
     for (const view of Object.values(views)) {
       view.setBounds({
         x: 0,
-        y: nav_bar_height,
+        y: navBarHeight,
         width: width, 
-        height: height - nav_bar_height 
+        height: height - navBarHeight 
       });
     }
   });
 
-  // --- 关键：拦截关闭事件 ---
-  // 点击窗口的 "x" 按钮时，不是退出，而是隐藏
   mainWindow.on('close', (event) => {
-    // app.isQuitting 是我们在托盘菜单"退出"时设置的标志
     if (!app.isQuitting) {
-      event.preventDefault(); // 阻止窗口关闭
-      mainWindow.hide();      // 只是隐藏窗口
+      event.preventDefault(); 
+      mainWindow.hide();  
     }
   });
 
-  // 失去焦点时自动隐藏 (如果您喜欢这个功能，可以取消注释)
+  // 失去焦点时自动隐藏
   // mainWindow.on('blur', () => {
   //   if (mainWindow.isVisible()) {
   //     mainWindow.hide();
@@ -110,56 +90,37 @@ function createWindow() {
   // });
 }
 
-// 创建所有的 AI BrowserView
 function createAIViews() {
   const [width, height] = mainWindow.getContentSize();
 
-  ai_sites.forEach((site, index) => {
-    // const view = new BrowserView();
-    const view = new BrowserView({
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        webSecurity: true,
-        // 为每个 BrowserView 启用实验性功能
-        experimentalFeatures: true
-      }
-    });
-    mainWindow.addBrowserView(view);
-    
+  aiSites.forEach((site, index) => {
+    const view = new BrowserView();
     view.setBounds({ 
       x: 0, 
-      y: nav_bar_height, 
+      y: navBarHeight, 
       width: width, 
-      height: height - nav_bar_height 
+      height: height - navBarHeight 
     });
-
-    // --- 关键：在加载 URL 之前设置 User-Agent ---
     const agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
     view.webContents.setUserAgent(agent);
-     // 为每个 BrowserView 单独处理证书错误
-    view.webContents.on('certificate-error', (event, url, error, certificate, callback) => {
-      event.preventDefault();
-      callback(true);
-    });
-      // 设置权限请求处理器
-    view.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-      const allowedPermissions = ['notifications', 'clipboard-read', 'clipboard-write'];
-      callback(allowedPermissions.includes(permission));
-    });
     view.webContents.loadURL(site.url);
     views[site.id] = view
     loadedStates[site.id] = false
+    mainWindow.addBrowserView(view);
 
+    view.webContents.on('did-start-loading', () => {
+        loadedStates[site.id] = true;
+    });
+    view.webContents.on('did-frame-finish-load', () => {
+        loadedStates[site.id] = true;
+    });
+    view.webContents.on('dom-ready', () => {
+        loadedStates[site.id] = true;
+    });
     view.webContents.on('did-finish-load', () => {
         loadedStates[site.id] = true; 
     });
 
-    if (index !== 0) {
-      mainWindow.removeBrowserView(view);
-      mainWindow.addBrowserView(view);
-    }
-    // 解决外部链接问题，不一定有效
     view.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith('http') && !url.startsWith(site.url)) {
         shell.openExternal(url);
@@ -169,32 +130,30 @@ function createAIViews() {
     });
   });
 
-  if (ai_sites.length > 0) {
-    const firstView = views[ai_sites[0].id];
-    
-    mainWindow.addBrowserView(firstView); // <<-- 只添加第一个
-    firstView.webContents.focus();        // <<-- 确保初始视图也获得焦点
-    mainWindow.setTopBrowserView(views[ai_sites[0].id]);
-  }
+  /* 显示0号 默认启动会切换一次，不用管这个 */
+  // if (aiSites.length > 0) {
+  //   const firstView = views[aiSites[0].id];
+  //   mainWindow.addBrowserView(firstView); 
+  //   firstView.webContents.focus();  
+  //   mainWindow.setTopBrowserView(views[aiSites[0].id]);
+  // }
 }
 
 function createTray() {
   const iconPath = path.join(__dirname, 'assets/icon.png'); 
   tray = new Tray(iconPath);
   const contextMenu = Menu.buildFromTemplate([
-    { label: `显示/隐藏 (${hot_key})`, click: toggleWindow },
+    { label: `显示/隐藏 (${hotKey})`, click: toggleWindow },
     { type: 'separator' },
     { label: '退出软件', click: () => {
-        app.isQuitting = true; // 设置标志
-        app.quit();          // 真正退出
+        app.isQuitting = true; 
+        app.quit();  
       } 
     },
   ]);
 
   tray.setToolTip('NAiWeb');
   tray.setContextMenu(contextMenu);
-
-  // 点击托盘图标也切换显示
   tray.on('click', toggleWindow);
 }
 
@@ -212,36 +171,33 @@ function showWindow() {
 }
 
 ipcMain.handle('get-sites', () => {
-  return ai_sites.map(site => ({ id: site.id, name: site.name }));
+  return aiSites.map(site => ({ id: site.id, name: site.name }));
 });
 ipcMain.handle('switch-view', (event, id) => {
   const view = views[id];
+  console.log("switch view", view)
   if (view) {
     for (const v of Object.values(views)) {
         mainWindow.removeBrowserView(v);
     }
-    // view.webContents.focus()
     if (loadedStates[id] === false) {
-        view.webContents.reloadIgnoringCache(); // 强制刷新 (忽略缓存)
+        view.webContents.reloadIgnoringCache();
     }
-    // mainWindow.setTopBrowserView(view);
     mainWindow.addBrowserView(view);
     return { success: true };
   }
   return { success: false };
 });
 
-
 app.whenReady().then(() => {
   createWindow();
   createTray();
-
-  const ret = globalShortcut.register(hot_key, () => {
+  const ret = globalShortcut.register(hotKey, () => {
     toggleWindow();
   });
 
   if (!ret) {
-    console.error('全局快捷键注册失败');
+    console.error('register hotkey error');
   }
 });
 
@@ -266,7 +222,7 @@ app.on('window-all-closed', (e) => {
 ipcMain.on('refresh-view', (event, id) => {
     const view = views[id];
     if (view && view.webContents) {
-        console.log("refresh", id)
+        loadedStates[id] = false
         view.webContents.reload(); 
     }
 });

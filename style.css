@@ -1,26 +1,22 @@
-/* 全局重置 */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
-    overflow: hidden; /* 隐藏滚动条 */
-    background-color: #dbe3f1; /* 暗色背景 */
+    overflow: hidden; 
+    background-color: #dbe3f1; 
     color: #d8dee9;
 }
 
-/* 导航栏容器 */
 .ai-nav {
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* 从左侧开始 */
-    height: 50px; /* 必须和 main.js 中的 nav_bar_height 一致 */
+    justify-content: flex-start; 
+    height: 50px; /* 必须和 main.js 中的 navBarHeight 一致 */
     padding: 0 10px;
-    background-color: #719fa3; /* 稍亮的背景 */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(90deg, #719fa3 0%, #a1c4fd 100%);
     -webkit-app-region: drag; /* 允许拖动窗口 */
 }
 
-/* 导航按钮 */
 .nav-button {
     padding: 8px 16px;
     margin: 0 5px;
@@ -36,42 +32,42 @@ body {
 }
 
 .nav-button:hover {
-    background-color: #5e81ac; /* 悬停颜色 */
+    background-color: #5e81ac;
+    color: #fff;
 }
 
-/* 激活状态的按钮 */
 .nav-button.active {
     background-color: #88c0d0; /* 激活颜色 */
-    color: #2e3440; /* 激活时的文字颜色 */
+    color: #415b51; /* 激活时的文字颜色 */
     box-shadow: 0 0 10px rgba(136, 192, 208, 0.5);
 }
 
-/* style.css */
-
-.ai-nav {
-    /* ... 保持原有样式 ... */
-    
-    /* --- 【CSS 添加】 允许拖动窗口 --- */
-    -webkit-app-region: drag;
-    /* --------------------------------- */
-}
-
-.nav-button {
-    /* ... 保持原有样式 ... */
-
-    /* 必须：确保按钮本身不可拖动，否则点击无效 */
-    -webkit-app-region: no-drag; 
-}
-
-/* 新增：分隔符，占据剩余空间，将后续元素推到最右侧 */
 .spacer {
     flex-grow: 1; 
-    /* 允许拖动窗口 */
     -webkit-app-region: drag;
 }
 
-/* （可选）图标按钮样式，让图标居中 */
 .icon-btn {
-    padding: 8px 12px;
-    font-size: 16px; 
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ececec;
+    transition: background 0.2s;
+}
+
+
+.icon-btn.spinning {
+    animation: spin 0.6s linear;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
