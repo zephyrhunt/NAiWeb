@@ -13,7 +13,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start; /* 从左侧开始 */
-    height: 50px; /* 必须和 main.js 中的 NAV_BAR_HEIGHT 一致 */
+    height: 50px; /* 必须和 main.js 中的 nav_bar_height 一致 */
     padding: 0 10px;
     background-color: #719fa3; /* 稍亮的背景 */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);

@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 1. 从主进程获取 AI 网站列表
   const sites = await window.api.getSites();
   if (!sites || sites.length === 0) {
-    navBar.textContent = '请在 main.js 中配置 AI_SITES';
+    navBar.textContent = '请在 main.js 中配置 ai_sites';
     return;
   }
 
