@@ -39,6 +39,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   navBar.appendChild(refreshBtn);
 
+  // 添加网站：点击 ➕ 打开 modal 子窗口（由主进程创建），主进程会在添加成功后通过 'site-added' 广播给此渲染进程
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '➕'
+  addBtn.classList.add('icon-btn');
+  addBtn.classList.add('nav-button');
+  addBtn.title = '待实现';
+
+  addBtn.addEventListener('click', () => {
+    window.api.openAddWindow();
+  });
+  navBar.appendChild(addBtn);
+
   if (navBar.children.length > 0) {
     activeButton = navBar.children[0];
     activeButton.classList.add('active');

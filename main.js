@@ -48,7 +48,7 @@ function createWindow() {
       webSecurity: false
     },
   });
-
+  
   mainWindow.setMenu(null);
   mainWindow.loadFile('index.html');
   mainWindow.webContents.on('did-finish-load', () => {
