@@ -21,7 +21,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // const refreshBtn = document.getElementById('refresh-btn');
   const refreshBtn = document.createElement('button');
-
   refreshBtn.textContent = '🔄'
   // 只添加icon-btn点击无用
   refreshBtn.classList.add('icon-btn');
@@ -47,7 +46,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   addBtn.title = '待实现';
 
   addBtn.addEventListener('click', () => {
-    window.api.openAddWindow();
+    // window.api.openAddWindow();
+    window.api.switchView('add');
   });
   navBar.appendChild(addBtn);
 

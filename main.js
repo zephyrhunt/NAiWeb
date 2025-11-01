@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu,shell } = require('electron');
+const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu, shell } = require('electron');
 const path = require('path');
 
 const fs = require('fs');
@@ -16,11 +16,11 @@ const aiSites = (() => {
     return [];
   }
 })();
-const navBarHeight = 50; 
+const navBarHeight = 50;
 const hotKey = 'Ctrl+Q'; // 快捷键
 let mainWindow;
 let tray;
-const views = {}; 
+const views = {};
 const loadedStates = {};
 app.commandLine.appendSwitch('ignore-certificate-errors');
 // 防止应用多开 
@@ -39,8 +39,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 900,
-    show: true, 
-    skipTaskbar: true,  
+    show: true,
+    skipTaskbar: true,
     frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -48,29 +48,29 @@ function createWindow() {
       webSecurity: false
     },
   });
-  
+
   mainWindow.setMenu(null);
   mainWindow.loadFile('index.html');
   mainWindow.webContents.on('did-finish-load', () => {
     createAIViews();
   });
-  
+
   mainWindow.on('resize', () => {
     const [width, height] = mainWindow.getContentSize();
     for (const view of Object.values(views)) {
       view.setBounds({
         x: 0,
         y: navBarHeight,
-        width: width, 
-        height: height - navBarHeight 
+        width: width,
+        height: height - navBarHeight
       });
     }
   });
 
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
-      event.preventDefault(); 
-      mainWindow.hide();  
+      event.preventDefault();
+      mainWindow.hide();
     }
   });
 
@@ -84,6 +84,24 @@ function createWindow() {
 
 function createAIViews() {
   const [width, height] = mainWindow.getContentSize();
+  const view = new BrowserView({
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      backgroundThrottling: true  // 允许后台节流
+    }
+  });
+  view.setBounds({
+    x: 0,
+    y: navBarHeight,
+    width: width,
+    height: height - navBarHeight
+  });
+  // const agent = " Chrome/129.0.0.0 Firefox/70.0"
+  const agent = "Chrome/129.0.6647.127 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko)"
+  view.webContents.setUserAgent(agent);
+  view.webContents.loadFile(path.join(__dirname, 'add_site.html'));
+  views['add'] = view
+  mainWindow.addBrowserView(view);
 
   aiSites.forEach((site, index) => {
     const view = new BrowserView({
@@ -91,41 +109,37 @@ function createAIViews() {
         backgroundThrottling: true  // 允许后台节流
       }
     });
-    view.setBounds({ 
-      x: 0, 
-      y: navBarHeight, 
-      width: width, 
-      height: height - navBarHeight 
+    view.setBounds({
+      x: 0,
+      y: navBarHeight,
+      width: width,
+      height: height - navBarHeight
     });
     // const agent = " Chrome/129.0.0.0 Firefox/70.0"
     const agent = "Chrome/129.0.6647.127 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko)"
     view.webContents.setUserAgent(agent);
-    view.webContents.loadURL(site.url);
     views[site.id] = view
     loadedStates[site.id] = false
     mainWindow.addBrowserView(view);
 
-    view.webContents.on('did-start-loading', () => {
-        loadedStates[site.id] = true;
-    });
     view.webContents.on('did-frame-finish-load', () => {
-        loadedStates[site.id] = true;
+      console.log('frame');
+      loadedStates[site.id] = true;
     });
     view.webContents.on('dom-ready', () => {
-        loadedStates[site.id] = true;
-    });
-    view.webContents.on('did-finish-load', () => {
-        loadedStates[site.id] = true; 
+      console.log('dom-ready');
+      loadedStates[site.id] = true;
     });
 
     view.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith('http') && !url.startsWith(site.url)) {
         shell.openExternal(url);
-        return { action: 'deny' }; 
+        return { action: 'deny' };
       }
       return { action: 'allow' };
     });
   });
+
 
   /* 显示0号 默认启动会切换一次，不用管这个 */
   // if (aiSites.length > 0) {
@@ -137,15 +151,16 @@ function createAIViews() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, 'assets/icon.png'); 
+  const iconPath = path.join(__dirname, 'assets/icon.png');
   tray = new Tray(iconPath);
   const contextMenu = Menu.buildFromTemplate([
     { label: `显示/隐藏 (${hotKey})`, click: toggleWindow },
     { type: 'separator' },
-    { label: '退出软件', click: () => {
-        app.isQuitting = true; 
-        app.quit();  
-      } 
+    {
+      label: '退出软件', click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
     },
   ]);
 
@@ -157,7 +172,7 @@ function createTray() {
 /* 只有显示和focus才会隐藏 */
 function toggleWindow() {
   if (mainWindow.isVisible() && mainWindow.isFocused()) {
-      mainWindow.hide();
+    mainWindow.hide();
   } else {
     showWindow();
   }
@@ -172,7 +187,7 @@ ipcMain.handle('get-sites', () => {
 });
 ipcMain.handle('switch-view', (event, id) => {
   const view = views[id];
-  console.log("switch view", view)
+  console.log("switch view", id, view)
   if (view) {
     for (const [viewId, v] of Object.entries(views)) {
       if (viewId === id) {
@@ -184,12 +199,18 @@ ipcMain.handle('switch-view', (event, id) => {
         mainWindow.removeBrowserView(v);
       }
     }
-    if (loadedStates[id] === false) {
-        view.webContents.reloadIgnoringCache();
+    const siteObject = aiSites.find(site => site.id === id);
+    if (loadedStates[id] === false && id != 'add') {
+      view.webContents.loadURL(siteObject.url);
+      view.webContents.reloadIgnoringCache();
     }
     return { success: true };
-  }
+  } 
   return { success: false };
+});
+
+ipcMain.handle('add-site', async (event, site) => {
+  console.log('添加站点:', site.name, site.url);
 });
 
 app.whenReady().then(() => {
@@ -223,9 +244,9 @@ app.on('window-all-closed', (e) => {
 });
 
 ipcMain.on('refresh-view', (event, id) => {
-    const view = views[id];
-    if (view && view.webContents) {
-        loadedStates[id] = false
-        view.webContents.reload(); 
-    }
+  const view = views[id];
+  if (view && view.webContents) {
+    loadedStates[id] = false
+    view.webContents.reload();
+  }
 });

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>添加 AI 站点</title>
+</head>
+
+<body>
+  <h1>添加新的 AI 站点</h1>
+  <form id="addSiteForm">
+    <label for="siteName">名称:</label>
+    <input type="text" id="siteName" required><br><br>
+    <label for="siteUrl">URL:</label>
+    <input type="url" id="siteUrl" required><br><br>
+    <button id="addButton" type="button">保存站点</button>
+  </form>
+  <script>
+    const form = document.getElementById('addSiteForm');
+    const addBtn = document.getElementById('addButton');
+    const nameInput = document.getElementById('siteName');
+    const urlInput = document.getElementById('siteUrl');
+
+    // Prevent form submit (e.g. pressing Enter) from reloading the page
+    form.addEventListener('submit', (e) => e.preventDefault());
+
+    addBtn.addEventListener('click', async () => {
+      console.log('保存按钮点击');
+      const name = nameInput.value.trim();
+      const url = urlInput.value.trim();
+      if (!name || !url) {
+        alert('请填写名称和 URL');
+        return;
+      }
+
+      addBtn.disabled = true;
+      try {
+        // 传入值而不是 DOM 元素；假设 preload 已暴露 window.api.addSite 并返回 Promise
+        await window.api.addSite({ name, url });
+        // 仅在保存成功后清空输入框
+        nameInput.value = '';
+        urlInput.value = '';
+        alert('站点已保存');
+      } catch (err) {
+        console.error('保存站点失败:', err);
+        alert('保存失败，请查看控制台以获得更多信息'+err);
+      } finally {
+        addBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
