@@ -19,6 +19,14 @@
     {
       "name": "千问",
       "url": "https://www.tongyi.com"
+    },
+    {
+      "name": "electron",
+      "url": "https://www.electronjs.org/zh/docs/latest/api/browser-window"
+    },
+    {
+      "name": "aa",
+      "url": "https://www.baidu.com"
     }
   ]
 }

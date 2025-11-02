@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu, shell } = require('electron');
+const { app, WebContentsView, BrowserWindow, ipcMain, webContents, globalShortcut, Tray, Menu, shell } = require('electron');
 
 const fs = require('fs');
 const path = require('path');
@@ -48,10 +48,10 @@ function saveConfig(configData) {
 }
 
 const navBarHeight = 50;
-const hotKey = 'Ctrl+Q'; // 快捷键
+const hotKey = 'Ctrl+Q';
 let mainWindow;
 let tray;
-let views = [] ;//new Map();
+let views = [];
 const loadedStates = {};
 app.commandLine.appendSwitch('ignore-certificate-errors');
 // 防止应用多开 
@@ -67,6 +67,10 @@ if (!gotTheLock) {
 }
 
 loadConfig();
+
+/**
+ * @brief 创建主窗口，加载index.html
+ */
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -76,12 +80,10 @@ function createWindow() {
     frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      // 允许操作，例如复制
       webSecurity: false
     },
   });
 
-  mainWindow.setMenu(null);
   mainWindow.loadFile('index.html');
   mainWindow.webContents.on('did-finish-load', () => {
     createAIViews();
@@ -113,14 +115,20 @@ function createWindow() {
   //   }
   // });
 }
+
+
+/**
+ * @brief 创建默认的窗口，给定尺寸，绑定preload.js中的函数
+ */
 function createDefaultView() {
   const [width, height] = mainWindow.getContentSize();
-  const view = new BrowserView({
+  const view = new WebContentsView({
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      backgroundThrottling: true  // 允许后台节流
+      webSecurity: false,
     }
-  });
+  })
+  mainWindow.contentView.addChildView(view)
   view.setBounds({
     x: 0,
     y: navBarHeight,
@@ -133,15 +141,15 @@ function createDefaultView() {
 }
 
 function createAIViews() {
-  const view = createDefaultView()
-  view.webContents.loadFile(path.join(__dirname, 'add_site.html'));
-  views['add'] = view
-  mainWindow.addBrowserView(view);
+  const add_view = createDefaultView()
+  add_view.webContents.loadFile(path.join(__dirname, 'add_site.html'));
+  views['add'] = add_view
+  mainWindow.contentView.addChildView(add_view)
   aiSites.forEach((site, index) => {
     const view = createDefaultView()
     views[site.name] = view
     loadedStates[site.name] = false
-    mainWindow.addBrowserView(view);
+    mainWindow.contentView.addChildView(view)
     view.webContents.on('did-frame-finish-load', () => {
       loadedStates[site.name] = true;
     });
@@ -191,12 +199,10 @@ ipcMain.handle('switch-view', (event, id) => {
   if (view) {
     for (const [viewId, v] of Object.entries(views)) {
       if (viewId === id) {
-        v.webContents.setBackgroundThrottling(false);
-        mainWindow.removeBrowserView(v);
-        mainWindow.addBrowserView(v);
+        mainWindow.contentView.removeChildView(v)
+        mainWindow.contentView.addChildView(v)
       } else {
-        v.webContents.setBackgroundThrottling(true);
-        mainWindow.removeBrowserView(v);
+        mainWindow.contentView.removeChildView(v)
       }
     }
     const siteObject = aiSites.find(site => site.name === id);
@@ -226,7 +232,7 @@ ipcMain.handle('add-site', async (event, newSite) => {
   const site = newSite;
   views[site.name] = view;
   loadedStates[site.name] = false;
-  mainWindow.addBrowserView(view);
+  // mainWindow.contentView.addChildView(view);
   view.webContents.on('did-frame-finish-load', () => {
     loadedStates[site.name] = true;
   });
@@ -244,14 +250,12 @@ ipcMain.handle('delete-site', async (event, name) => {
     throw new Error('Site not found');
   }
   aiSites.splice(index, 1);
-  // await saveSitesToStorage(sitesData); // 你的保存函数
   const success = saveConfig({ sites: aiSites });
   if (success) {
     console.log("delete and save success")
-    // views.removeBrowserView(view => view.name === name)
     if (viewToRemove) {
       try {
-        mainWindow.removeBrowserView(viewToRemove);
+        mainWindow.contentView.removeChildView(viewToRemove)
         console.log(`BrowserView for "${name}" removed and destroyed.`);
         delete views[name]
       } catch (error) {
