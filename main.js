@@ -51,7 +51,7 @@ const navBarHeight = 50;
 const hotKey = 'Ctrl+Q'; // 快捷键
 let mainWindow;
 let tray;
-const views = {};
+let views = [] ;//new Map();
 const loadedStates = {};
 app.commandLine.appendSwitch('ignore-certificate-errors');
 // 防止应用多开 
@@ -235,21 +235,32 @@ ipcMain.handle('add-site', async (event, newSite) => {
   });
 });
 
-// ipcMain.handle('delete-site', async (event, siteId) => {
-//   console.log("delete_site", siteId)
-//   var sitesData = aiSites;
-//   const index = sitesData.findIndex(site => site.name === siteId); // 假设 id 是 name
-//   if (index === -1) {
-//     throw new Error('Site not found');
-//   }
-//   sitesData.splice(index, 1);
-//   await saveSitesToStorage(sitesData); // 你的保存函数
-//   BrowserWindow.getAllWindows().forEach(win => {
-//     win.webContents.send('site-removed', siteId);
-//   });
-
-//   return { success: true }; // 返回成功响应
-// });
+ipcMain.handle('delete-site', async (event, name) => {
+  console.log("delete_site", name, views)
+  const viewToRemove = views[name]
+  console.log("view", viewToRemove);
+  const index = aiSites.findIndex(site => site.name === name); // 假设 id 是 name
+  if (index === -1) {
+    throw new Error('Site not found');
+  }
+  aiSites.splice(index, 1);
+  // await saveSitesToStorage(sitesData); // 你的保存函数
+  const success = saveConfig({ sites: aiSites });
+  if (success) {
+    console.log("delete and save success")
+    // views.removeBrowserView(view => view.name === name)
+    if (viewToRemove) {
+      try {
+        mainWindow.removeBrowserView(viewToRemove);
+        console.log(`BrowserView for "${name}" removed and destroyed.`);
+        delete views[name]
+      } catch (error) {
+        console.error(`Failed to remove BrowserView for "${name}":`, error);
+      }
+    }
+  }
+  return { success: true }; // 返回成功响应
+});
 
 app.whenReady().then(() => {
   createWindow();

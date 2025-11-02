@@ -2,10 +2,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   getSites: () => ipcRenderer.invoke('get-sites'),
-  refreshView: (id) => ipcRenderer.send('refresh-view', id),
-  switchView: (id) => ipcRenderer.invoke('switch-view', id),
+  refreshView: (name) => ipcRenderer.send('refresh-view', name),
+  switchView: (name) => ipcRenderer.invoke('switch-view', name),
   addSite: (site) => ipcRenderer.invoke('add-site', site),
-  deleteSite: (id) => ipcRenderer.invoke('delete-site', id),
+  deleteSite: (name) => ipcRenderer.invoke('delete-site', name),
   on: (channel, callback) => {
     const validChannels = ['site-added', 'site-removed']; // 白名单，确保安全
     if (validChannels.includes(channel)) {
