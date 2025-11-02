@@ -1,28 +1,8 @@
+const navBar = document.getElementById('ai-nav-bar');
 window.addEventListener('DOMContentLoaded', async () => {
-  const navBar = document.getElementById('ai-nav-bar');
   let activeButton = null;
-
-  const sites = await window.api.getSites();
-  sites.forEach(site => {
-    const button = document.createElement('button');
-    button.textContent = site.name;
-    button.classList.add('nav-button');
-    button.dataset.id = site.id;
-    button.addEventListener('click', () => {
-      window.api.switchView(site.id);
-      if (activeButton) {
-        activeButton.classList.remove('active');
-      }
-      button.classList.add('active');
-      activeButton = button;
-    });
-    navBar.appendChild(button);
-  });
-
-  // const refreshBtn = document.getElementById('refresh-btn');
   const refreshBtn = document.createElement('button');
   refreshBtn.textContent = '🔄'
-  // 只添加icon-btn点击无用
   refreshBtn.classList.add('icon-btn');
   refreshBtn.classList.add('nav-button');
   refreshBtn.addEventListener('click', () => {
@@ -43,16 +23,57 @@ window.addEventListener('DOMContentLoaded', async () => {
   addBtn.textContent = '➕'
   addBtn.classList.add('icon-btn');
   addBtn.classList.add('nav-button');
-  addBtn.title = '待实现';
+  addBtn.title = '添加新的站点';
 
-  addBtn.addEventListener('click', () => {
+  addBtn.addEventListener('mousedown', () => {
     // window.api.openAddWindow();
     window.api.switchView('add');
   });
   navBar.appendChild(addBtn);
 
+  const sites = await window.api.getSites();
+  sites.forEach(site => {
+    const button = document.createElement('button');
+    button.textContent = site.name;
+    button.classList.add('nav-button');
+    button.dataset.id = site.name;
+    /* 切换 */
+    button.addEventListener('mousedown', (mouse) => {
+      window.api.switchView(site.name);
+      if (activeButton) {
+        activeButton.classList.remove('active');
+      }
+      button.classList.add('active');
+      activeButton = button;
+    });
+    navBar.appendChild(button);
+  });
+  /* 创建完成后切换 */
   if (navBar.children.length > 0) {
-    activeButton = navBar.children[0];
+    activeButton = navBar.children[2];
+    activeButton.classList.add('active');
+    window.api.switchView(activeButton.dataset.id);
+  }
+});
+
+window.api.on('site-added', (newSite) => {
+  const button = document.createElement('button');
+  button.textContent = newSite.name;
+  button.classList.add('nav-button');
+  button.dataset.id = newSite.name;
+
+  button.addEventListener('mousedown', () => {
+    window.api.switchView(newSite.name);
+    if (activeButton) {
+      activeButton.classList.remove('active');
+    }
+    button.classList.add('active');
+    activeButton = button;
+  });
+
+  navBar.appendChild(button);
+  if (navBar.children.length === 1) {
+    activeButton = button;
     activeButton.classList.add('active');
     window.api.switchView(activeButton.dataset.id);
   }

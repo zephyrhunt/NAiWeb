@@ -2,16 +2,114 @@
 <html>
 
 <head>
-  <title>添加 AI 站点</title>
+  <title>添加站点</title>
+  <style>
+    /* body {
+    background-image:;
+    font-family: 'Inter',
+    sans-serif;
+    margin: auto
+    }*/
+
+     body {
+      background:
+        linear-gradient(125deg, #f4f4f2, #74777a, #e5f0c5, #dae2e9, #005b96, #c6e7f7);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      height: 100vh;
+      color: #a8d8f0;
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    /* 3. 标题和表单间距 */
+    h1 {
+      color: #4338ca;
+    }
+
+    #addSiteForm {
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    label {
+      /* Recreating: block text-sm font-medium text-gray-700 mb-1 */
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #192e1b;
+    }
+
+    input[type="text"],
+    input[type="url"] {
+      width: 50%;
+      padding: 0.75rem;
+      background-color: #bbccd5;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      transition: all 0.25s ease-in-out;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      /* shadow-sm */
+    }
+
+    input[type="text"]:focus,
+    input[type="url"]:focus {
+      outline: none;
+      border-color: #6366f1;
+      transform: scale(1.01);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+    }
+
+    /* 6. 按钮样式 */
+    #addButton {
+      width: 60%;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+      background-color: #7d78df;
+      color: #fff;
+      border-radius: 0.5rem;
+      transition: all 0.2s ease-in-out;
+      justify-content: center;
+    }
+
+    #addButton:hover {
+      background-color: #5e598d;
+      transform: scale(1.02);
+    }
+
+    #addButton:active {
+      background-color: #c7c6d7;
+      border-color: #cc438c;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>添加新的 AI 站点</h1>
+  <h1>添加新的站点</h1>
   <form id="addSiteForm">
-    <label for="siteName">名称:</label>
-    <input type="text" id="siteName" required><br><br>
-    <label for="siteUrl">URL:</label>
-    <input type="url" id="siteUrl" required><br><br>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label for="siteName">名称:</label>
+      <input type="text" id="siteName" required>
+    </div>
+    <br><br>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label for="siteUrl">URL:</label>
+      <input type="url" id="siteUrl" required title="URL 必须以 http:// 或 https:// 开头，并包含有效域名。"
+        placeholder="例如: https://chat.openai.com">
+    </div>
+    <br><br>
     <button id="addButton" type="button">保存站点</button>
   </form>
   <script>
@@ -19,34 +117,23 @@
     const addBtn = document.getElementById('addButton');
     const nameInput = document.getElementById('siteName');
     const urlInput = document.getElementById('siteUrl');
-
-    // Prevent form submit (e.g. pressing Enter) from reloading the page
-    form.addEventListener('submit', (e) => e.preventDefault());
-
     addBtn.addEventListener('click', async () => {
-      console.log('保存按钮点击');
       const name = nameInput.value.trim();
       const url = urlInput.value.trim();
-      if (!name || !url) {
-        alert('请填写名称和 URL');
+      if (!form.checkValidity()) {
+        form.reportValidity();
         return;
       }
-
       addBtn.disabled = true;
       try {
-        // 传入值而不是 DOM 元素；假设 preload 已暴露 window.api.addSite 并返回 Promise
         await window.api.addSite({ name, url });
-        // 仅在保存成功后清空输入框
-        nameInput.value = '';
-        urlInput.value = '';
-        alert('站点已保存');
       } catch (err) {
-        console.error('保存站点失败:', err);
-        alert('保存失败，请查看控制台以获得更多信息'+err);
+        alert('保存失败' + err);
       } finally {
         addBtn.disabled = false;
       }
     });
   </script>
 </body>
+
 </html>

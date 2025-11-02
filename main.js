@@ -1,21 +1,52 @@
 const { app, BrowserWindow, ipcMain, BrowserView, globalShortcut, Tray, Menu, shell } = require('electron');
-const path = require('path');
 
 const fs = require('fs');
-const aiSites = (() => {
+const path = require('path');
+const CONFIG_DIR = path.join(app.getAppPath(), 'config');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'ai_sites.json');
+
+let aiSites = []
+function loadConfig() {
   try {
-    const configPath = path.join(__dirname, 'config', 'ai_sites.json');
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      return config.sites;
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
     }
-    console.error('need add ai_sites.josn', configPath);
-    return [];
+
+    if (fs.existsSync(CONFIG_FILE)) {
+      const configJson = fs.readFileSync(CONFIG_FILE, 'utf8');
+      const config = JSON.parse(configJson);
+      aiSites = Array.isArray(config.sites) ? config.sites : [];
+      console.log(`Config loaded: ${aiSites.length} sites.`);
+      return true;
+    } else {
+      // 如果文件不存在，创建空文件
+      saveConfig({ sites: [] });
+      aiSites = [];
+      console.log('ai_sites.json not found, created an empty config file.');
+      return true;
+    }
   } catch (error) {
-    console.error('read error', error);
-    return [];
+    console.error('Error loading or parsing config:', error);
+    aiSites = [];
+    return false;
   }
-})();
+}
+/**
+ * 将 aiSites 数组写入文件
+ * @param {object} configData - 包含 { sites: [] } 的配置对象
+ */
+function saveConfig(configData) {
+  try {
+    const configJson = JSON.stringify(configData, null, 2);
+    fs.writeFileSync(CONFIG_FILE, configJson, 'utf8');
+    console.log('Config saved successfully.');
+    return true;
+  } catch (error) {
+    console.error('Error saving config:', error);
+    return false;
+  }
+}
+
 const navBarHeight = 50;
 const hotKey = 'Ctrl+Q'; // 快捷键
 let mainWindow;
@@ -35,10 +66,11 @@ if (!gotTheLock) {
   });
 }
 
+loadConfig();
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 900,
+    width: 1200,
+    height: 800,
     show: true,
     skipTaskbar: true,
     frame: false,
@@ -81,8 +113,7 @@ function createWindow() {
   //   }
   // });
 }
-
-function createAIViews() {
+function createDefaultView() {
   const [width, height] = mainWindow.getContentSize();
   const view = new BrowserView({
     webPreferences: {
@@ -96,58 +127,28 @@ function createAIViews() {
     width: width,
     height: height - navBarHeight
   });
-  // const agent = " Chrome/129.0.0.0 Firefox/70.0"
   const agent = "Chrome/129.0.6647.127 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko)"
   view.webContents.setUserAgent(agent);
+  return view;
+}
+
+function createAIViews() {
+  const view = createDefaultView()
   view.webContents.loadFile(path.join(__dirname, 'add_site.html'));
   views['add'] = view
   mainWindow.addBrowserView(view);
-
   aiSites.forEach((site, index) => {
-    const view = new BrowserView({
-      webPreferences: {
-        backgroundThrottling: true  // 允许后台节流
-      }
-    });
-    view.setBounds({
-      x: 0,
-      y: navBarHeight,
-      width: width,
-      height: height - navBarHeight
-    });
-    // const agent = " Chrome/129.0.0.0 Firefox/70.0"
-    const agent = "Chrome/129.0.6647.127 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko)"
-    view.webContents.setUserAgent(agent);
-    views[site.id] = view
-    loadedStates[site.id] = false
+    const view = createDefaultView()
+    views[site.name] = view
+    loadedStates[site.name] = false
     mainWindow.addBrowserView(view);
-
     view.webContents.on('did-frame-finish-load', () => {
-      console.log('frame');
-      loadedStates[site.id] = true;
+      loadedStates[site.name] = true;
     });
     view.webContents.on('dom-ready', () => {
-      console.log('dom-ready');
-      loadedStates[site.id] = true;
-    });
-
-    view.webContents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith('http') && !url.startsWith(site.url)) {
-        shell.openExternal(url);
-        return { action: 'deny' };
-      }
-      return { action: 'allow' };
+      loadedStates[site.name] = true;
     });
   });
-
-
-  /* 显示0号 默认启动会切换一次，不用管这个 */
-  // if (aiSites.length > 0) {
-  //   const firstView = views[aiSites[0].id];
-  //   mainWindow.addBrowserView(firstView); 
-  //   firstView.webContents.focus();  
-  //   mainWindow.setTopBrowserView(views[aiSites[0].id]);
-  // }
 }
 
 function createTray() {
@@ -169,7 +170,6 @@ function createTray() {
   tray.on('click', toggleWindow);
 }
 
-/* 只有显示和focus才会隐藏 */
 function toggleWindow() {
   if (mainWindow.isVisible() && mainWindow.isFocused()) {
     mainWindow.hide();
@@ -183,7 +183,7 @@ function showWindow() {
 }
 
 ipcMain.handle('get-sites', () => {
-  return aiSites.map(site => ({ id: site.id, name: site.name }));
+  return aiSites.map(site => ({ id: site.name, name: site.name }));
 });
 ipcMain.handle('switch-view', (event, id) => {
   const view = views[id];
@@ -199,19 +199,57 @@ ipcMain.handle('switch-view', (event, id) => {
         mainWindow.removeBrowserView(v);
       }
     }
-    const siteObject = aiSites.find(site => site.id === id);
+    const siteObject = aiSites.find(site => site.name === id);
     if (loadedStates[id] === false && id != 'add') {
       view.webContents.loadURL(siteObject.url);
       view.webContents.reloadIgnoringCache();
     }
     return { success: true };
-  } 
+  }
   return { success: false };
 });
 
-ipcMain.handle('add-site', async (event, site) => {
-  console.log('添加站点:', site.name, site.url);
+ipcMain.handle('add-site', async (event, newSite) => {
+  console.log('addsite', newSite.name, newSite.url);
+  loadConfig();
+  if (aiSites.some(site => site.name === newSite.name)) {
+    console.log("already exists", newSite.name);
+    return { success: false, message: `ID "${newSite.name}" already exists.` };
+  }
+  aiSites.push(newSite)
+  const success = saveConfig({ sites: aiSites })
+  if (success) {
+    mainWindow.send('site-added', newSite);
+    console.log("save success", aiSites)
+  }
+  const view = createDefaultView();
+  const site = newSite;
+  views[site.name] = view;
+  loadedStates[site.name] = false;
+  mainWindow.addBrowserView(view);
+  view.webContents.on('did-frame-finish-load', () => {
+    loadedStates[site.name] = true;
+  });
+  view.webContents.on('dom-ready', () => {
+    loadedStates[site.name] = true;
+  });
 });
+
+// ipcMain.handle('delete-site', async (event, siteId) => {
+//   console.log("delete_site", siteId)
+//   var sitesData = aiSites;
+//   const index = sitesData.findIndex(site => site.name === siteId); // 假设 id 是 name
+//   if (index === -1) {
+//     throw new Error('Site not found');
+//   }
+//   sitesData.splice(index, 1);
+//   await saveSitesToStorage(sitesData); // 你的保存函数
+//   BrowserWindow.getAllWindows().forEach(win => {
+//     win.webContents.send('site-removed', siteId);
+//   });
+
+//   return { success: true }; // 返回成功响应
+// });
 
 app.whenReady().then(() => {
   createWindow();
