@@ -1,31 +1,37 @@
-const { app, WebContentsView, BrowserWindow, ipcMain, globalShortcut, Tray, Menu,} = require('electron');
+const { app, WebContentsView, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, } = require('electron');
 
 if (require('electron-squirrel-startup')) app.quit();
 const fs = require('fs');
 const path = require('path');
+const CONFIG_DIR_TARGET = path.join(app.getPath('userData'), 'config');
+const CONFIG_FILE_TARGET = path.join(CONFIG_DIR_TARGET, 'ai_sites.json');
+
 const CONFIG_DIR = path.join(app.getAppPath(), 'config');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'ai_sites.json');
+const CONFIG_FILE_SOURCE = path.join(CONFIG_DIR, 'ai_sites.json');
 
 let aiSites = []
 function loadConfig() {
   try {
-    if (!fs.existsSync(CONFIG_DIR)) {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    if (!fs.existsSync(CONFIG_DIR_TARGET)) {
+      fs.mkdirSync(CONFIG_DIR_TARGET, { recursive: true });
     }
 
-    if (fs.existsSync(CONFIG_FILE)) {
-      const configJson = fs.readFileSync(CONFIG_FILE, 'utf8');
-      const config = JSON.parse(configJson);
-      aiSites = Array.isArray(config.sites) ? config.sites : [];
-      console.log(`Config loaded: ${aiSites.length} sites.`);
-      return true;
-    } else {
-      // 如果文件不存在，创建空文件
-      saveConfig({ sites: [] });
-      aiSites = [];
-      console.log('ai_sites.json not found, created an empty config file.');
-      return true;
+    if (!fs.existsSync(CONFIG_FILE_TARGET)) {
+      if (fs.existsSync(CONFIG_FILE_SOURCE)) {
+        fs.copyFileSync(CONFIG_FILE_SOURCE, CONFIG_FILE_TARGET);
+      } else {
+        // 如果文件不存在，创建空文件
+        saveConfig({ sites: [] });
+        aiSites = [];
+        console.log('ai_sites.json not found, created an empty config file.');
+        return true;
+      }
     }
+    const configJson = fs.readFileSync(CONFIG_FILE_TARGET, 'utf8');
+    const config = JSON.parse(configJson);
+    aiSites = Array.isArray(config.sites) ? config.sites : [];
+    console.log(`Config loaded: ${aiSites.length} sites.`);
+    return true;
   } catch (error) {
     console.error('Error loading or parsing config:', error);
     aiSites = [];
@@ -39,7 +45,7 @@ function loadConfig() {
 function saveConfig(configData) {
   try {
     const configJson = JSON.stringify(configData, null, 2);
-    fs.writeFileSync(CONFIG_FILE, configJson, 'utf8');
+    fs.writeFileSync(CONFIG_FILE_TARGET, configJson, 'utf8');
     console.log('Config saved successfully.');
     return true;
   } catch (error) {
