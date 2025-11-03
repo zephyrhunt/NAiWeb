@@ -1,7 +1,8 @@
 {
-  "name": "NAiWeb",
-  "version": "1.0.0",
-  "description": "AI助手快捷打开",
+  "name": "n-web",
+  "packageName": "NiWeb",
+  "version": "1.2.0",
+  "description": "Assit Web By Nichijou",
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
@@ -9,7 +10,10 @@
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
-  "author": "NICHIJOU",
+  "author": {
+    "name":"NICHIJOU",
+    "email": "d202380258@hust.edu.cn"
+  },
   "license": "MIT",
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",
@@ -24,23 +28,5 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"
-  },
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "name": "NAiWebX",
-        "appBundleId": "nichijouu.cn",
-        "icon": "assets/icon"
-      },
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "iconUrl": "https://raw.githubusercontent.com/your-repo/your-project/master/assets/icon.ico",
-            "setupIcon": "assets/icon.ico"
-          }
-        }
-      ]
-    }
   }
 }

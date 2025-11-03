@@ -1,5 +1,6 @@
-const { app, WebContentsView, BrowserWindow, ipcMain, webContents, globalShortcut, Tray, Menu, shell } = require('electron');
+const { app, WebContentsView, BrowserWindow, ipcMain, globalShortcut, Tray, Menu,} = require('electron');
 
+if (require('electron-squirrel-startup')) app.quit();
 const fs = require('fs');
 const path = require('path');
 const CONFIG_DIR = path.join(app.getAppPath(), 'config');
