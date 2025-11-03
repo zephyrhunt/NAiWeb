@@ -1,29 +1,32 @@
 {
   "sites": [
     {
-      "id": "openai",
       "name": "ChatGPT",
       "url": "https://chat.openai.com"
     },
     {
-      "id": "gemini",
       "name": "Gemini",
       "url": "https://gemini.google.com/app"
     },
     {
-      "id": "tencentyuanbao",
       "name": "元宝",
       "url": "https://yuanbao.tencent.com/chat"
     },
     {
-      "id": "deepseek",
       "name": "DeepSeek",
       "url": "https://chat.deepseek.com"
     },
     {
-      "id": "tongyi",
       "name": "千问",
       "url": "https://www.tongyi.com"
+    },
+    {
+      "name": "electron",
+      "url": "https://www.electronjs.org/zh/docs/latest/api/browser-window"
+    },
+    {
+      "name": "aa",
+      "url": "https://www.baidu.com"
     }
   ]
 }
