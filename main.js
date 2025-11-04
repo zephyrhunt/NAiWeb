@@ -200,7 +200,7 @@ function showWindow() {
 ipcMain.handle('get-sites', () => {
   return aiSites.map(site => ({ id: site.name, name: site.name }));
 });
-ipcMain.handle('switch-view', (event, id) => {
+function switchView(event, id) {
   const view = views[id];
   console.log("switch view", id, view)
   if (view) {
@@ -220,7 +220,9 @@ ipcMain.handle('switch-view', (event, id) => {
     return { success: true };
   }
   return { success: false };
-});
+}
+
+ipcMain.handle('switch-view', switchView);
 
 ipcMain.handle('add-site', async (event, newSite) => {
   console.log('addsite', newSite.name, newSite.url);
@@ -246,6 +248,7 @@ ipcMain.handle('add-site', async (event, newSite) => {
   view.webContents.on('dom-ready', () => {
     loadedStates[site.name] = true;
   });
+  switchView(null, 'add');
 });
 
 ipcMain.handle('delete-site', async (event, name) => {
@@ -263,6 +266,9 @@ ipcMain.handle('delete-site', async (event, name) => {
     if (viewToRemove) {
       try {
         mainWindow.contentView.removeChildView(viewToRemove)
+        if (!viewToRemove.webContents.isDestroyed()) {
+           viewToRemove.webContents.destroy(); 
+        }
         console.log(`BrowserView for "${name}" removed and destroyed.`);
         delete views[name]
       } catch (error) {
